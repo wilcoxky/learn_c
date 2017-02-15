@@ -36,6 +36,7 @@ void die(const char *message)
 
 void Address_print(struct Address *address)
 {
+
   printf("%d %s %s\n", address->id, address->name, address->email);
 }
 
@@ -84,6 +85,7 @@ struct Connection *Database_open(char *filename, char mode)
 
 void Database_close(struct Connection *conn)
 {
+  printf("Closing the db\n");
   if (conn) {
     if (conn->file) {
       fclose(conn->file);
@@ -175,6 +177,35 @@ void Database_list(struct Connection *conn)
   }
 }
 
+void Database_find(struct Connection *conn, char *key, char *value)
+{
+  struct Database *db = conn->db;
+  int i = 0;
+  struct Address *found = NULL;
+  for (i = 0; i < MAX_ROWS; i++) {
+    // struct Address address = db->rows[i]; // This would copy is onto stack
+    struct Address *cur = &db->rows[i];
+    if (cur->set) {
+      int isFound = 1;
+      if (strcmp(key, "email") == 0) {
+        isFound = strcmp(cur->email, value);
+      } else if (strcmp(key, "name") == 0) {
+        isFound = strcmp(cur->name, value);
+      } else {
+        die("Invalid Key given: name or email\n");
+      }
+      if (isFound == 0) {
+        found = cur;
+      }
+    }
+  }
+  if (!found) {
+    die("Entry not found");
+  } else {
+    Address_print(found);
+  }
+}
+
 int main(int argc, char *argv[])
 {
   if (argc < 3) {
@@ -219,6 +250,12 @@ int main(int argc, char *argv[])
       break;
     case 'l':
       Database_list(conn);
+      break;
+    case 'f':
+      if (argc != 5) {
+        die("Must include key and value\n");
+      }
+      Database_find(conn, argv[3], argv[4]);
       break;
     default:
       printf("Command Not Found: l=list, d=delete, g=get, c=create, s=set\n");
